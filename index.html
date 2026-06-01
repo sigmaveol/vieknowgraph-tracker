@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VieKnowGraph — Task Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --p0:  #A3CCDA; --p0l: #EAF4F8; --p0d: #5A9BB8;
+  --p1:  #BDE3C3; --p1l: #EEF8EF; --p1d: #6BB87A;
+  --p2:  #FFCFDF; --p2l: #FFF0F5; --p2d: #E8829F;
+  --p3:  #FEFDCA; --p3l: #FFFEF0; --p3d: #C8C450;
+  --p4:  #E0F9B5; --p4l: #F5FEE9; --p4d: #8DCB42;
+  --p5:  #A5DEE5; --p5l: #E8F8FA; --p5d: #4DB8C4;
+  --p6:  #F5D2D2; --p6l: #FDF0F0; --p6d: #D07878;
+  --white: #FFFFFF;
+  --bg: #F8F9FB;
+  --surface: #FFFFFF;
+  --border: #E8EAF0;
+  --border2: #D4D8E8;
+  --text1: #1A1D29;
+  --text2: #5A5F7A;
+  --text3: #9298B0;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text1); font-size:14px; line-height:1.5; }
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; font-family:inherit; }
+
+/* ── LAYOUT ── */
+.app { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+.sidebar { background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; display:flex; flex-direction:column; gap:6px; position:sticky; top:0; height:100vh; overflow-y:auto; }
+.main { padding:28px 32px; overflow-y:auto; }
+
+/* ── SIDEBAR ── */
+.logo { display:flex; align-items:center; gap:10px; padding:0 8px 20px; border-bottom:1px solid var(--border); margin-bottom:8px; }
+.logo-icon { width:34px; height:34px; border-radius:9px; background:var(--p0); display:flex; align-items:center; justify-content:center; font-size:16px; }
+.logo-text { font-weight:600; font-size:15px; }
+.logo-sub { font-size:11px; color:var(--text3); font-family:'JetBrains Mono',monospace; }
+
+.nav-section { font-size:10px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.8px; padding:12px 8px 4px; }
+.nav-item { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:var(--radius-sm); cursor:pointer; transition:background .15s; font-size:13.5px; color:var(--text2); border:none; background:none; width:100%; text-align:left; }
+.nav-item:hover { background:var(--bg); color:var(--text1); }
+.nav-item.active { background:var(--p0l); color:var(--p0d); font-weight:500; }
+.nav-item .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.nav-item .count { margin-left:auto; font-size:11px; background:var(--bg); padding:1px 6px; border-radius:20px; color:var(--text3); }
+
+.sidebar-footer { margin-top:auto; padding-top:16px; border-top:1px solid var(--border); }
+.progress-mini { padding:8px 10px; background:var(--bg); border-radius:var(--radius-sm); }
+.progress-mini-label { display:flex; justify-content:space-between; font-size:11px; color:var(--text3); margin-bottom:6px; }
+.bar-track { height:4px; background:var(--border); border-radius:4px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:4px; transition:width .6s ease; }
+
+/* ── HEADER ── */
+.page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; }
+.page-title { font-size:22px; font-weight:600; letter-spacing:-.3px; }
+.page-sub { font-size:13px; color:var(--text3); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+.header-actions { display:flex; gap:8px; }
+.btn { padding:7px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; border:1px solid var(--border2); background:var(--surface); color:var(--text2); transition:all .15s; }
+.btn:hover { background:var(--bg); border-color:var(--border2); color:var(--text1); }
+.btn-primary { background:var(--p0); border-color:var(--p0d); color:var(--p0d); font-weight:600; }
+.btn-primary:hover { background:var(--p0d); color:white; }
+
+/* ── STATS ROW ── */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); }
+.stat-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; font-weight:500; margin-bottom:6px; }
+.stat-val { font-size:26px; font-weight:600; letter-spacing:-.5px; line-height:1; }
+.stat-sub { font-size:11px; color:var(--text3); margin-top:4px; }
+.stat-tag { display:inline-flex; align-items:center; gap:3px; font-size:11px; padding:2px 7px; border-radius:20px; font-weight:500; margin-top:5px; }
+
+/* ── VIEW TABS ── */
+.view-tabs { display:flex; gap:2px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:3px; margin-bottom:20px; width:fit-content; }
+.view-tab { padding:5px 14px; border-radius:5px; font-size:13px; font-weight:500; cursor:pointer; border:none; background:none; color:var(--text3); transition:all .15s; }
+.view-tab.active { background:var(--surface); color:var(--text1); box-shadow:var(--shadow); }
+
+/* ── CALENDAR VIEW ── */
+.cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cal-nav { display:flex; align-items:center; gap:8px; }
+.cal-nav button { width:30px; height:30px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); color:var(--text2); display:flex; align-items:center; justify-content:center; font-size:16px; transition:all .15s; }
+.cal-nav button:hover { background:var(--bg); border-color:var(--border2); }
+.cal-month { font-size:16px; font-weight:600; }
+.cal-grid { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+.cal-days-header { display:grid; grid-template-columns:repeat(7,1fr); border-bottom:1px solid var(--border); }
+.cal-day-name { padding:10px 0; text-align:center; font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; }
+.cal-day-name.weekend { color:var(--p6d); }
+.cal-cells { display:grid; grid-template-columns:repeat(7,1fr); }
+.cal-cell { min-height:90px; padding:8px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); position:relative; cursor:pointer; transition:background .12s; }
+.cal-cell:nth-child(7n) { border-right:none; }
+.cal-cell:hover { background:var(--bg); }
+.cal-cell.other-month { opacity:.35; }
+.cal-cell.today .cal-num { background:var(--p0d); color:white; border-radius:50%; }
+.cal-cell.sunday { background:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,207,223,.12) 4px,rgba(255,207,223,.12) 5px); }
+.cal-cell.has-tasks { background:var(--bg); }
+.cal-num { font-size:12px; font-weight:500; width:24px; height:24px; display:flex; align-items:center; justify-content:center; margin-bottom:4px; }
+.cal-task-pill { font-size:10px; padding:2px 6px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500; }
+.cal-sunday-tag { font-size:9px; color:var(--p6d); font-weight:600; letter-spacing:.3px; opacity:.7; }
+.cal-more { font-size:10px; color:var(--text3); margin-top:2px; }
+
+/* ── WEEKLY VIEW ── */
+.week-view { display:flex; flex-direction:column; gap:10px; }
+.week-day-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+.week-day-header { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; }
+.week-day-label { font-weight:600; font-size:13px; min-width:80px; }
+.week-day-date { font-size:12px; color:var(--text3); font-family:'JetBrains Mono',monospace; }
+.week-day-phase { font-size:10px; padding:2px 8px; border-radius:20px; font-weight:600; margin-left:auto; }
+.week-day-count { font-size:11px; color:var(--text3); }
+.week-day-chevron { font-size:12px; color:var(--text3); transition:transform .2s; }
+.week-day-row.open .week-day-chevron { transform:rotate(180deg); }
+.week-tasks { display:none; padding:8px 16px 12px; display:flex; flex-direction:column; gap:6px; }
+
+/* ── TASK ITEM ── */
+.task-row { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--surface); transition:all .15s; cursor:pointer; }
+.task-row:hover { border-color:var(--border2); box-shadow:var(--shadow); }
+.task-row.done { opacity:.55; }
+.task-row.done .task-title { text-decoration:line-through; }
+.task-row.overdue { border-left:3px solid var(--p6d); }
+.task-check { width:18px; height:18px; border-radius:4px; border:1.5px solid var(--border2); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; transition:all .15s; background:var(--surface); font-size:10px; }
+.task-row.done .task-check { background:var(--p1d); border-color:var(--p1d); color:white; }
+.task-body { flex:1; min-width:0; }
+.task-title { font-size:13.5px; font-weight:500; margin-bottom:2px; }
+.task-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.task-time { font-size:11px; color:var(--text3); font-family:'JetBrains Mono',monospace; }
+.task-tag { font-size:10px; padding:1px 7px; border-radius:20px; font-weight:600; }
+.task-link { font-size:10px; color:var(--p0d); padding:1px 7px; border:1px solid var(--p0); border-radius:4px; transition:all .15s; }
+.task-link:hover { background:var(--p0); color:var(--p0d); }
+.task-type-badge { width:6px; height:6px; border-radius:50%; flex-shrink:0; margin-top:6px; }
+
+/* ── PHASE LIST VIEW ── */
+.phase-accordion { display:flex; flex-direction:column; gap:10px; }
+.phase-block { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+.phase-head { display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer; transition:background .12s; }
+.phase-head:hover { background:var(--bg); }
+.phase-stripe { width:4px; height:36px; border-radius:4px; flex-shrink:0; }
+.phase-info { flex:1; }
+.phase-name { font-weight:600; font-size:14px; }
+.phase-range { font-size:11px; color:var(--text3); font-family:'JetBrains Mono',monospace; margin-top:1px; }
+.phase-stat { text-align:right; }
+.phase-pct { font-size:18px; font-weight:600; }
+.phase-tasks-count { font-size:11px; color:var(--text3); }
+.phase-bar-row { height:3px; background:var(--border); }
+.phase-bar-inner { height:100%; transition:width .6s ease; }
+.phase-body { display:none; padding:0 18px 14px; }
+.phase-block.open .phase-body { display:block; }
+.phase-block.open .phase-chevron { transform:rotate(180deg); }
+.phase-chevron { font-size:12px; color:var(--text3); transition:transform .2s; }
+
+.week-section { margin-top:12px; }
+.week-label { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.week-label::after { content:''; flex:1; height:1px; background:var(--border); }
+.week-status-dot { width:6px; height:6px; border-radius:50%; }
+
+/* ── MODAL / DETAIL PANEL ── */
+.detail-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.25); z-index:100; align-items:center; justify-content:center; }
+.detail-overlay.open { display:flex; }
+.detail-panel { background:var(--surface); border-radius:var(--radius); width:420px; max-height:85vh; overflow-y:auto; box-shadow:var(--shadow-md); padding:24px; }
+.detail-close { position:absolute; top:16px; right:16px; width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:var(--surface); font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.detail-top { margin-bottom:16px; }
+.detail-task-name { font-size:17px; font-weight:600; margin-bottom:6px; }
+.detail-row { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--text2); margin-bottom:5px; }
+.detail-label { color:var(--text3); min-width:70px; font-weight:500; }
+.detail-actions { display:flex; gap:8px; margin-top:20px; }
+.notes-box { margin-top:12px; }
+.notes-box label { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px; }
+.notes-box textarea { width:100%; height:80px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; color:var(--text1); resize:none; outline:none; background:var(--bg); transition:border .15s; }
+.notes-box textarea:focus { border-color:var(--p0d); }
+
+/* ── MISC ── */
+.empty-state { text-align:center; padding:60px 0; color:var(--text3); }
+.empty-state .icon { font-size:36px; margin-bottom:12px; opacity:.4; }
+.badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:2px 8px; border-radius:20px; font-weight:600; }
+
+/* ── TODAY BANNER ── */
+.today-banner { display:flex; align-items:center; gap:14px; background:var(--p0l); border:1px solid var(--p0); border-radius:var(--radius); padding:14px 18px; margin-bottom:20px; }
+.today-banner-icon { font-size:22px; }
+.today-banner-main { font-weight:600; font-size:14px; }
+.today-banner-sub { font-size:12px; color:var(--text2); margin-top:1px; }
+.today-banner-action { margin-left:auto; }
+
+@media(max-width:900px) {
+  .app { grid-template-columns:1fr; }
+  .sidebar { display:none; }
+  .main { padding:16px; }
+  .stats-row { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🧠</div>
+    <div>
+      <div class="logo-text">VieKnowGraph</div>
+      <div class="logo-sub">v0.1 · 24 tuần</div>
+    </div>
+  </div>
+
+  <div class="nav-section">Xem theo</div>
+  <button class="nav-item active" onclick="switchView('calendar')">
+    <span style="font-size:15px">📅</span> Lịch tháng
+  </button>
+  <button class="nav-item" onclick="switchView('week')">
+    <span style="font-size:15px">📋</span> Theo tuần
+  </button>
+  <button class="nav-item" onclick="switchView('phases')">
+    <span style="font-size:15px">🗂</span> Theo phase
+  </button>
+
+  <div class="nav-section">Phase</div>
+  <button class="nav-item" onclick="filterPhase(0)">
+    <span class="dot" style="background:#A3CCDA"></span> Phase 0: Learning
+    <span class="count">24</span>
+  </button>
+  <button class="nav-item" onclick="filterPhase(1)">
+    <span class="dot" style="background:#BDE3C3"></span> Phase 1: Data
+    <span class="count">12</span>
+  </button>
+  <button class="nav-item" onclick="filterPhase(2)">
+    <span class="dot" style="background:#FFCFDF"></span> Phase 2: KG Build
+    <span class="count">20</span>
+  </button>
+  <button class="nav-item" onclick="filterPhase(3)">
+    <span class="dot" style="background:#FEFDCA"></span> Phase 3: Agents
+    <span class="count">25</span>
+  </button>
+  <button class="nav-item" onclick="filterPhase(4)">
+    <span class="dot" style="background:#E0F9B5"></span> Phase 4: Advanced
+    <span class="count">15</span>
+  </button>
+  <button class="nav-item" onclick="filterPhase(5)">
+    <span class="dot" style="background:#A5DEE5"></span> Phase 5: Production
+    <span class="count">20</span>
+  </button>
+  <button class="nav-item" onclick="filterPhase(6)">
+    <span class="dot" style="background:#F5D2D2"></span> Phase 6: Publish
+    <span class="count">10</span>
+  </button>
+
+  <div class="sidebar-footer">
+    <div class="progress-mini">
+      <div class="progress-mini-label">
+        <span>Tổng tiến độ</span>
+        <span id="sidebar-pct">4%</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" id="sidebar-bar" style="background:#A3CCDA;width:4%"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:5px">1 / 24 tuần · 4h / 576h</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+
+  <!-- header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Task Tracker</div>
+      <div class="page-sub">// START 02/06/2026 · 4H/DAY · NO SUNDAY</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" onclick="toggleCompleted()">⚙ Ẩn/hiện done</button>
+      <button class="btn btn-primary" onclick="markTodayDone()">✓ Xong hôm nay</button>
+    </div>
+  </div>
+
+  <!-- today banner -->
+  <div class="today-banner" id="todayBanner">
+    <div class="today-banner-icon">☀️</div>
+    <div>
+      <div class="today-banner-main" id="todayBannerMain">Hôm nay: Thứ 2, 02/06/2026 — Week 1 · Day 2</div>
+      <div class="today-banner-sub">Phase 0: Learning Foundations · CS224N Lectures &amp; Dev Setup</div>
+    </div>
+    <button class="btn btn-primary today-banner-action" onclick="scrollToToday()">Đến hôm nay →</button>
+  </div>
+
+  <!-- stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Tuần hiện tại</div>
+      <div class="stat-val" style="color:#5A9BB8">W1</div>
+      <div class="stat-sub">02/06 – 07/06/2026</div>
+      <div class="stat-tag" style="background:#EAF4F8;color:#5A9BB8">● Phase 0: Learning</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tasks hôm nay</div>
+      <div class="stat-val" id="stat-today">3</div>
+      <div class="stat-sub" id="stat-today-sub">1 done · 2 còn lại</div>
+      <div class="stat-tag" style="background:#EEF8EF;color:#6BB87A">4h / ngày</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tiến độ phase 0</div>
+      <div class="stat-val" style="color:#C8C450">4%</div>
+      <div style="margin-top:8px">
+        <div class="bar-track">
+          <div class="bar-fill" style="background:#FEFDCA;width:4%"></div>
+        </div>
+      </div>
+      <div class="stat-sub" style="margin-top:4px">1/4 tuần hoàn thành</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Hoàn thành</div>
+      <div class="stat-val" id="stat-done">1</div>
+      <div class="stat-sub">task đã tick ✓</div>
+      <div class="stat-tag" style="background:#EEF8EF;color:#6BB87A" id="stat-done-pct">Tốt lắm! 🎉</div>
+    </div>
+  </div>
+
+  <!-- view tabs -->
+  <div class="view-tabs">
+    <button class="view-tab active" id="tab-calendar" onclick="switchView('calendar')">📅 Lịch</button>
+    <button class="view-tab" id="tab-week" onclick="switchView('week')">📋 Tuần</button>
+    <button class="view-tab" id="tab-phases" onclick="switchView('phases')">🗂 Phase</button>
+  </div>
+
+  <!-- ── CALENDAR VIEW ── -->
+  <div id="view-calendar">
+    <div class="cal-header">
+      <div class="cal-nav">
+        <button onclick="prevMonth()">‹</button>
+        <div class="cal-month" id="calMonthLabel">Tháng 6, 2026</div>
+        <button onclick="nextMonth()">›</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3)">
+        <span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><span style="width:8px;height:8px;border-radius:2px;background:#A3CCDA;display:inline-block"></span>Học</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><span style="width:8px;height:8px;border-radius:2px;background:#BDE3C3;display:inline-block"></span>Code</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><span style="width:8px;height:8px;border-radius:2px;background:#FFCFDF;display:inline-block"></span>Review</span>
+        <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#FEFDCA;display:inline-block"></span>Deploy</span>
+      </div>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-days-header">
+        <div class="cal-day-name">T2</div>
+        <div class="cal-day-name">T3</div>
+        <div class="cal-day-name">T4</div>
+        <div class="cal-day-name">T5</div>
+        <div class="cal-day-name">T6</div>
+        <div class="cal-day-name">T7</div>
+        <div class="cal-day-name weekend">CN</div>
+      </div>
+      <div class="cal-cells" id="calCells"></div>
+    </div>
+  </div>
+
+  <!-- ── WEEKLY VIEW ── -->
+  <div id="view-week" style="display:none">
+    <div class="week-view" id="weekViewContainer"></div>
+  </div>
+
+  <!-- ── PHASES VIEW ── -->
+  <div id="view-phases" style="display:none">
+    <div class="phase-accordion" id="phaseContainer"></div>
+  </div>
+
+</main>
+</div>
+
+<!-- ── TASK DETAIL MODAL ── -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="detail-panel" style="position:relative">
+    <button class="detail-close" onclick="closeDetailPanel()">×</button>
+    <div class="detail-top">
+      <div id="detailBadge" style="margin-bottom:8px"></div>
+      <div class="detail-task-name" id="detailTitle">Task name</div>
+    </div>
+    <div class="detail-row"><span class="detail-label">📅 Ngày</span><span id="detailDate">—</span></div>
+    <div class="detail-row"><span class="detail-label">⏰ Thời gian</span><span id="detailTime">—</span></div>
+    <div class="detail-row"><span class="detail-label">🏷 Phase</span><span id="detailPhase">—</span></div>
+    <div class="detail-row"><span class="detail-label">📌 Loại</span><span id="detailType">—</span></div>
+    <div class="detail-row"><span class="detail-label">🔗 Link</span><span id="detailLink">—</span></div>
+    <div class="notes-box">
+      <label>Ghi chú</label>
+      <textarea id="detailNotes" placeholder="Ghi chú cho task này..."></textarea>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-primary" id="detailDoneBtn" onclick="toggleDetailDone()">✓ Đánh dấu xong</button>
+      <button class="btn" onclick="closeDetailPanel()">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DATA — 24 weeks, 4h/day, no Sunday
+// ══════════════════════════════════════════════════════
+const PHASES = [
+  { id:0, name:'Phase 0: Learning', color:'#A3CCDA', light:'#EAF4F8', dark:'#5A9BB8' },
+  { id:1, name:'Phase 1: Data',     color:'#BDE3C3', light:'#EEF8EF', dark:'#6BB87A' },
+  { id:2, name:'Phase 2: KG Build', color:'#FFCFDF', light:'#FFF0F5', dark:'#E8829F' },
+  { id:3, name:'Phase 3: Agents',   color:'#FEFDCA', light:'#FFFEF0', dark:'#C8C450' },
+  { id:4, name:'Phase 4: Advanced', color:'#E0F9B5', light:'#F5FEE9', dark:'#8DCB42' },
+  { id:5, name:'Phase 5: Prod',     color:'#A5DEE5', light:'#E8F8FA', dark:'#4DB8C4' },
+  { id:6, name:'Phase 6: Publish',  color:'#F5D2D2', light:'#FDF0F0', dark:'#D07878' },
+];
+
+// Task types
+const TYPES = {
+  learn:  { label:'📚 Học lý thuyết', color:'#A3CCDA', light:'#EAF4F8', dark:'#5A9BB8' },
+  code:   { label:'💻 Coding', color:'#BDE3C3', light:'#EEF8EF', dark:'#6BB87A' },
+  review: { label:'📝 Review/Quiz', color:'#FFCFDF', light:'#FFF0F5', dark:'#E8829F' },
+  setup:  { label:'⚙️ Setup/Config', color:'#FEFDCA', light:'#FFFEF0', dark:'#C8C450' },
+  deploy: { label:'🚀 Deploy/Release', color:'#E0F9B5', light:'#F5FEE9', dark:'#8DCB42' },
+  write:  { label:'✍️ Viết báo cáo', color:'#A5DEE5', light:'#E8F8FA', dark:'#4DB8C4' },
+  test:   { label:'🧪 Testing', color:'#F5D2D2', light:'#FDF0F0', dark:'#D07878' },
+};
+
+// Helper: date to string 'YYYY-MM-DD'
+const ds = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+// Build tasks list (date, title, time, type, phase, link, week, day)
+const TASKS = [];
+
+function addTask(date, title, time, type, phase, link='', week=1, dayLabel='') {
+  TASKS.push({ id: TASKS.length, date, title, time, type, phase, link, week, dayLabel, done: false, notes: '' });
+}
+
+// ── WEEK 1 (02-07/06) — NLP Foundations ──────────────────
+addTask('2026-06-02','CS224N Lec 1-2: Word Vectors & GloVe','9:00–11:00','learn',0,'https://www.youtube.com/playlist?list=PLoROMvodv4rOSH4v6133s9LFPRHjEmbmJ',1,'W1·T3');
+addTask('2026-06-02','CS224N Lec 3: Neural Networks & Backprop','14:00–16:00','learn',0,'https://www.youtube.com/playlist?list=PLoROMvodv4rOSH4v6133s9LFPRHjEmbmJ',1,'W1·T3');
+addTask('2026-06-02','Quiz Day 1 — Word Vectors (HTML quiz)','16:30–17:00','review',0,'',1,'W1·T3');
+addTask('2026-06-03','CS224N Lec 4-5: Dependency Parsing & RNNs','9:00–11:00','learn',0,'https://www.youtube.com/playlist?list=PLoROMvodv4rOSH4v6133s9LFPRHjEmbmJ',1,'W1·T4');
+addTask('2026-06-03','CS224N Lec 6-7: LSTMs & Vanishing Gradients','14:00–16:00','learn',0,'https://www.youtube.com/playlist?list=PLoROMvodv4rOSH4v6133s9LFPRHjEmbmJ',1,'W1·T4');
+addTask('2026-06-04','CS224N Lec 8: Attention Mechanism ⭐','9:00–11:00','learn',0,'http://nlp.seas.harvard.edu/annotated-transformer/',1,'W1·T5');
+addTask('2026-06-04','CS224N Lec 9-10: TRANSFORMERS ⭐⭐⭐','14:00–16:00','learn',0,'https://arxiv.org/abs/1706.03762',1,'W1·T5');
+addTask('2026-06-05','HuggingFace NLP Course Ch1-2','9:00–11:00','code',0,'https://huggingface.co/learn/nlp-course',1,'W1·T6');
+addTask('2026-06-05','Fine-tune BERT: sentiment classifier','14:00–16:00','code',0,'https://huggingface.co/learn/nlp-course',1,'W1·T6');
+addTask('2026-06-06','Dev Setup: Python 3.11 + VS Code + venv','9:00–11:00','setup',0,'',1,'W1·T7');
+addTask('2026-06-06','Dev Setup: Git, Docker, HuggingFace account','14:00–16:00','setup',0,'',1,'W1·T7');
+
+// ── WEEK 2 (08-13/06) — Vietnamese NLP ───────────────────
+addTask('2026-06-08','PhoBERT paper deep dive','9:00–11:00','learn',0,'https://arxiv.org/abs/2003.00744',2,'W2·T2');
+addTask('2026-06-08','PhoBERT: install & run examples','14:00–16:00','code',0,'https://github.com/VinAIResearch/PhoBERT',2,'W2·T2');
+addTask('2026-06-09','VnCoreNLP: install + test 4 components','9:00–11:00','setup',0,'https://github.com/vncorenlp/VnCoreNLP',2,'W2·T3');
+addTask('2026-06-09','Explore VLSP NER + UIT-VSFC datasets','14:00–16:00','code',0,'',2,'W2·T3');
+addTask('2026-06-10','PhoBERT NER: data preprocessing pipeline','9:00–11:00','code',0,'',2,'W2·T4');
+addTask('2026-06-10','PhoBERT NER: training run (F1 target >0.85)','14:00–16:00','code',0,'',2,'W2·T4');
+addTask('2026-06-11','PhoBERT NER: hyperparameter tuning','9:00–11:00','code',0,'',2,'W2·T5');
+addTask('2026-06-11','Evaluation + error analysis','14:00–16:00','review',0,'',2,'W2·T5');
+addTask('2026-06-12','Upload model to HuggingFace Hub','9:00–11:00','deploy',0,'https://huggingface.co',2,'W2·T6');
+addTask('2026-06-12','Week 2 review + Vietnamese NLP cheatsheet','14:00–16:00','review',0,'',2,'W2·T6');
+addTask('2026-06-13','Buffer/catchup + notes organization','9:00–13:00','review',0,'',2,'W2·T7');
+
+// ── WEEK 3 (15-20/06) — LangChain & LangGraph ────────────
+addTask('2026-06-15','LangChain: Models, Prompts, Output Parsers','9:00–11:00','learn',0,'https://python.langchain.com/docs',3,'W3·T2');
+addTask('2026-06-15','LangChain: Chains & Memory hands-on','14:00–16:00','code',0,'https://python.langchain.com/docs',3,'W3·T2');
+addTask('2026-06-16','LangChain: Agents & ReAct pattern','9:00–11:00','learn',0,'https://python.langchain.com/docs',3,'W3·T3');
+addTask('2026-06-16','Build ReAct agent with 3 custom tools','14:00–16:00','code',0,'',3,'W3·T3');
+addTask('2026-06-17','LangGraph: State graphs, Nodes & Edges','9:00–11:00','learn',0,'https://langchain-ai.github.io/langgraph/',3,'W3·T4');
+addTask('2026-06-17','LangGraph: Conditional routing + checkpoints','14:00–16:00','code',0,'',3,'W3·T4');
+addTask('2026-06-18','Build 2-agent demo (Researcher + Summarizer)','9:00–11:00','code',0,'',3,'W3·T5');
+addTask('2026-06-18','Test & document agent demo','14:00–16:00','test',0,'',3,'W3·T5');
+addTask('2026-06-19','Week 3 review + agent patterns doc','9:00–11:00','review',0,'',3,'W3·T6');
+addTask('2026-06-19','Read: ReAct paper + AutoGen reference','14:00–16:00','learn',0,'',3,'W3·T6');
+addTask('2026-06-20','Buffer + push code to GitHub','9:00–13:00','code',0,'https://github.com',3,'W3·T7');
+
+// ── WEEK 4 (22-27/06) — Neo4j & GNN ─────────────────────
+addTask('2026-06-22','Neo4j Graph Academy: Fundamentals','9:00–11:00','learn',0,'https://graphacademy.neo4j.com/',4,'W4·T2');
+addTask('2026-06-22','Cypher basics: MATCH, RETURN, WHERE','14:00–16:00','code',0,'https://neo4j.com/developer/cypher/',4,'W4·T2');
+addTask('2026-06-23','Cypher advanced: CREATE, MERGE, Paths','9:00–11:00','code',0,'',4,'W4·T3');
+addTask('2026-06-23','Neo4j: Indexes, constraints, PROFILE','14:00–16:00','code',0,'',4,'W4·T3');
+addTask('2026-06-24','PyTorch Geometric: GCN on Cora dataset','9:00–11:00','code',0,'https://pytorch-geometric.readthedocs.io/',4,'W4·T4');
+addTask('2026-06-24','GNN: GAT implementation + compare','14:00–16:00','code',0,'',4,'W4·T4');
+addTask('2026-06-25','Neo4j certification: practice tests','9:00–11:00','review',0,'https://graphacademy.neo4j.com/',4,'W4·T5');
+addTask('2026-06-25','Neo4j certification EXAM (target: pass)','14:00–16:00','review',0,'https://graphacademy.neo4j.com/',4,'W4·T5');
+addTask('2026-06-26','Phase 0 final review + all notes compile','9:00–11:00','review',0,'',4,'W4·T6');
+addTask('2026-06-26','GitHub: commit all code + write README','14:00–16:00','write',0,'https://github.com',4,'W4·T6');
+addTask('2026-06-27','PHASE 0 COMPLETE 🎓 — buffer + prep Phase 1','9:00–13:00','review',0,'',4,'W4·T7');
+
+// ── WEEK 5 (29/06-04/07) — Data Collection P1 ────────────
+addTask('2026-06-29','Wikipedia scraper: MediaWiki API setup','9:00–11:00','code',1,'',5,'W5·T2');
+addTask('2026-06-29','Wikipedia: download 100K articles pipeline','14:00–16:00','code',1,'',5,'W5·T2');
+addTask('2026-06-30','Google Scholar: SerpAPI integration','9:00–11:00','code',1,'',5,'W5·T3');
+addTask('2026-06-30','arXiv API crawler (cs.AI, cs.CL, cs.LG)','14:00–16:00','code',1,'',5,'W5·T3');
+addTask('2026-07-01','PDF processing: PyPDF2 + Tesseract OCR','9:00–11:00','code',1,'',5,'W5·T4');
+addTask('2026-07-01','News scrapers: VnExpress, Thanh Niên','14:00–16:00','code',1,'',5,'W5·T4');
+addTask('2026-07-02','MongoDB setup + data ingestion pipeline','9:00–11:00','setup',1,'',5,'W5·T5');
+addTask('2026-07-02','Data quality check + stats dashboard','14:00–16:00','code',1,'',5,'W5·T5');
+addTask('2026-07-03','Data EDA: distributions, word clouds','9:00–11:00','review',1,'',5,'W5·T6');
+addTask('2026-07-03','Week 5 review + data quality report','14:00–16:00','review',1,'',5,'W5·T6');
+addTask('2026-07-04','Buffer + MongoDB optimization','9:00–13:00','code',1,'',5,'W5·T7');
+
+// ── WEEK 6 (06-11/07) — Data Collection P2 ───────────────
+addTask('2026-07-06','TDTU repository access + bulk download','9:00–11:00','code',1,'',6,'W6·T2');
+addTask('2026-07-06','Semantic Scholar + DBLP APIs','14:00–16:00','code',1,'',6,'W6·T2');
+addTask('2026-07-07','Cross-source deduplication (rapidfuzz)','9:00–11:00','code',1,'',6,'W6·T3');
+addTask('2026-07-07','Author name normalization pipeline','14:00–16:00','code',1,'',6,'W6·T3');
+addTask('2026-07-08','MongoDB: create indexes + backup to S3','9:00–11:00','setup',1,'',6,'W6·T4');
+addTask('2026-07-08','VnCoreNLP: sentence segmentation 200K docs','14:00–16:00','code',1,'',6,'W6·T4');
+addTask('2026-07-09','Final data quality report + metrics','9:00–11:00','review',1,'',6,'W6·T5');
+addTask('2026-07-09','Push all scraping code to GitHub','14:00–16:00','write',1,'https://github.com',6,'W6·T5');
+addTask('2026-07-10','PHASE 1 COMPLETE — review + prep Phase 2','9:00–13:00','review',1,'',6,'W6·T6');
+
+// ── WEEKS 7-10: KG Construction (sampled) ─────────────────
+addTask('2026-07-13','Annotate NER training data (Label Studio)','9:00–11:00','code',2,'',7,'W7·T2');
+addTask('2026-07-13','PhoBERT NER fine-tuning for KG entities','14:00–16:00','code',2,'',7,'W7·T2');
+addTask('2026-07-15','Relation extraction: pattern-based','9:00–11:00','code',2,'',7,'W7·T4');
+addTask('2026-07-20','Entity linking: fuzzy match + embeddings','9:00–11:00','code',2,'',8,'W8·T2');
+addTask('2026-07-22','Neo4j: batch ingestion 500K entities','9:00–11:00','code',2,'',8,'W8·T4');
+addTask('2026-07-27','KG deduplication: Louvain community detect','9:00–11:00','code',2,'',9,'W9·T2');
+addTask('2026-08-03','KG validation: manual check 200 triples','9:00–11:00','review',2,'',10,'W10·T2');
+addTask('2026-08-05','KG quality report + PHASE 2 COMPLETE','9:00–13:00','review',2,'',10,'W10·T4');
+
+// ── WEEKS 11-15: Multi-Agent (sampled) ────────────────────
+addTask('2026-08-10','LangGraph: Research Agent implementation','9:00–11:00','code',3,'',11,'W11·T2');
+addTask('2026-08-12','QA Agent: Cypher query generator','9:00–11:00','code',3,'',11,'W11·T4');
+addTask('2026-08-17','Citation Analyzer: PageRank impl','9:00–11:00','code',3,'',12,'W12·T2');
+addTask('2026-08-19','Community detection: Louvain algo','9:00–11:00','code',3,'',12,'W12·T4');
+addTask('2026-08-24','Content Creator Agent: summary gen','9:00–11:00','code',3,'',13,'W13·T2');
+addTask('2026-08-31','Synthesis Agent + Coordinator logic','9:00–11:00','code',3,'',14,'W14·T2');
+addTask('2026-09-07','E2E integration tests (30 workflows)','9:00–11:00','test',3,'',15,'W15·T2');
+addTask('2026-09-09','Performance tuning + PHASE 3 COMPLETE','9:00–13:00','test',3,'',15,'W15·T4');
+
+// ── WEEKS 16-18: Advanced (sampled) ───────────────────────
+addTask('2026-09-14','GNN Link Prediction: GraphSAGE','9:00–11:00','code',4,'',16,'W16·T2');
+addTask('2026-09-16','GNN Node Classification: GAT','9:00–11:00','code',4,'',16,'W16·T4');
+addTask('2026-09-21','Multi-hop QA: path finding (2-hop)','9:00–11:00','code',4,'',17,'W17·T2');
+addTask('2026-09-28','Neovis.js interactive graph viz','9:00–11:00','code',4,'',18,'W18·T2');
+addTask('2026-09-30','PHASE 4 COMPLETE — review','9:00–13:00','review',4,'',18,'W18·T4');
+
+// ── WEEKS 19-22: Production (sampled) ─────────────────────
+addTask('2026-10-05','FastAPI: core endpoints + Swagger docs','9:00–11:00','code',5,'',19,'W19·T2');
+addTask('2026-10-07','Auth + rate limiting + API tests','9:00–11:00','test',5,'',19,'W19·T4');
+addTask('2026-10-12','React: search interface + routing','9:00–11:00','code',5,'',20,'W20·T2');
+addTask('2026-10-14','React: Neovis.js graph visualization','9:00–11:00','code',5,'',20,'W20·T4');
+addTask('2026-10-19','Docker Compose: all services','9:00–11:00','setup',5,'',21,'W21·T2');
+addTask('2026-10-21','CI/CD: GitHub Actions → Railway deploy','9:00–11:00','deploy',5,'',21,'W21·T4');
+addTask('2026-10-26','User guide + API docs + demo video','9:00–11:00','write',5,'',22,'W22·T2');
+addTask('2026-10-28','PHASE 5 COMPLETE — production live 🚀','9:00–13:00','deploy',5,'',22,'W22·T4');
+
+// ── WEEKS 23-24: Publishing ────────────────────────────────
+addTask('2026-11-02','HuggingFace: upload dataset + model cards','9:00–11:00','deploy',6,'https://huggingface.co',23,'W23·T2');
+addTask('2026-11-04','GitHub: clean repo + README + badges','9:00–11:00','write',6,'https://github.com',23,'W23·T4');
+addTask('2026-11-06','Announce on VietAI + LinkedIn + Reddit','9:00–11:00','write',6,'',23,'W23·T6');
+addTask('2026-11-09','Paper: write Abstract + Introduction','9:00–11:00','write',6,'https://www.overleaf.com',24,'W24·T2');
+addTask('2026-11-10','Paper: Methodology + Experiments','9:00–11:00','write',6,'',24,'W24·T3');
+addTask('2026-11-11','Presentation slides (20 slides)','9:00–11:00','write',6,'',24,'W24·T4');
+addTask('2026-11-12','Defense rehearsal #1','14:00–16:00','review',6,'',24,'W24·T5');
+addTask('2026-11-13','Defense rehearsal #2 + finalize','9:00–11:00','review',6,'',24,'W24·T6');
+addTask('2026-11-14','🎓 PROJECT COMPLETE — nộp báo cáo','9:00–13:00','deploy',6,'',24,'W24·T7');
+
+// Mark Day 1 task as done (Lec 1-2 xong rồi)
+TASKS[0].done = true;
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let currentView = 'calendar';
+let currentMonth = 5; // June (0-indexed)
+let currentYear = 2026;
+let showCompleted = true;
+let activeTaskId = null;
+
+// Restore from localStorage
+function saveState() {
+  const state = TASKS.map(t => ({ done: t.done, notes: t.notes }));
+  localStorage.setItem('vkg_state', JSON.stringify(state));
+}
+function loadState() {
+  const s = localStorage.getItem('vkg_state');
+  if (!s) return;
+  const state = JSON.parse(s);
+  state.forEach((t, i) => { if (TASKS[i]) { TASKS[i].done = t.done; TASKS[i].notes = t.notes; } });
+}
+loadState();
+
+// ══════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════
+const p = id => PHASES[id];
+const ty = type => TYPES[type] || TYPES.learn;
+
+function tasksByDate(dateStr) {
+  return TASKS.filter(t => t.date === dateStr);
+}
+
+function formatDate(d) {
+  const days = ['CN','T2','T3','T4','T5','T6','T7'];
+  return `${days[d.getDay()]} ${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function todayStr() { return ds(new Date()); }
+
+// ══════════════════════════════════════════════════════
+// VIEWS
+// ══════════════════════════════════════════════════════
+function switchView(v) {
+  currentView = v;
+  document.getElementById('view-calendar').style.display = v==='calendar'?'block':'none';
+  document.getElementById('view-week').style.display = v==='week'?'block':'none';
+  document.getElementById('view-phases').style.display = v==='phases'?'block':'none';
+  ['calendar','week','phases'].forEach(x => {
+    document.getElementById(`tab-${x}`).classList.toggle('active', x===v);
+  });
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const onclick = el.getAttribute('onclick') || '';
+    el.classList.toggle('active', onclick.includes(`'${v}'`));
+  });
+  if (v==='calendar') renderCalendar();
+  if (v==='week') renderWeekView();
+  if (v==='phases') renderPhases();
+}
+
+// ── CALENDAR ──────────────────────────────────────────
+const MONTHS = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+
+function renderCalendar() {
+  document.getElementById('calMonthLabel').textContent = `${MONTHS[currentMonth]}, ${currentYear}`;
+  const cells = document.getElementById('calCells');
+  cells.innerHTML = '';
+
+  // First day of month — Monday-based (0=Mon)
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  let startDow = firstDay.getDay(); // 0=Sun
+  let offset = startDow === 0 ? 6 : startDow - 1; // Mon=0, Sun=6
+
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const daysInPrev = new Date(currentYear, currentMonth, 0).getDate();
+  const total = Math.ceil((offset + daysInMonth) / 7) * 7;
+  const today = todayStr();
+
+  for (let i = 0; i < total; i++) {
+    let day, month, year, other = false;
+    if (i < offset) {
+      day = daysInPrev - offset + i + 1;
+      month = currentMonth - 1; year = currentYear;
+      if (month < 0) { month = 11; year--; }
+      other = true;
+    } else if (i >= offset + daysInMonth) {
+      day = i - offset - daysInMonth + 1;
+      month = currentMonth + 1; year = currentYear;
+      if (month > 11) { month = 0; year++; }
+      other = true;
+    } else {
+      day = i - offset + 1; month = currentMonth; year = currentYear;
+    }
+
+    const d = new Date(year, month, day);
+    const dStr = ds(d);
+    const isSun = d.getDay() === 0;
+    const isToday = dStr === today;
+    const dayTasks = tasksByDate(dStr);
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' +
+      (other?' other-month':'') +
+      (isToday?' today':'') +
+      (isSun?' sunday':'') +
+      (dayTasks.length>0?' has-tasks':'');
+
+    let inner = `<div class="cal-num">${day}</div>`;
+    if (isSun) inner += `<div class="cal-sunday-tag">NGHỈ</div>`;
+
+    const show = dayTasks.slice(0, 3);
+    show.forEach(t => {
+      const ph = p(t.phase), typ = ty(t.type);
+      inner += `<div class="cal-task-pill" style="background:${typ.light};color:${typ.dark}" onclick="openTask(${t.id}, event)">${t.title}</div>`;
+    });
+    if (dayTasks.length > 3) inner += `<div class="cal-more">+${dayTasks.length-3} more</div>`;
+
+    cell.innerHTML = inner;
+    cells.appendChild(cell);
+  }
+}
+
+function prevMonth() {
+  currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderCalendar();
+}
+function nextMonth() {
+  currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderCalendar();
+}
+
+// ── WEEK VIEW ─────────────────────────────────────────
+function renderWeekView() {
+  const c = document.getElementById('weekViewContainer');
+  c.innerHTML = '';
+
+  // Get all unique dates that have tasks
+  const dates = [...new Set(TASKS.map(t => t.date))].sort();
+  if (!dates.length) { c.innerHTML = '<div class="empty-state"><div class="icon">📋</div>Chưa có tasks</div>'; return; }
+
+  dates.forEach(dateStr => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayTasks = tasksByDate(dateStr).filter(t => showCompleted || !t.done);
+    if (!dayTasks.length) return;
+
+    const isSun = d.getDay() === 0;
+    const isToday = dateStr === todayStr();
+    const dayNames = ['CN','T2','T3','T4','T5','T6','T7'];
+
+    const row = document.createElement('div');
+    row.className = 'week-day-row' + (isToday?' open':'');
+    row.id = `day-${dateStr}`;
+
+    const ph = p(dayTasks[0].phase);
+    const doneCount = dayTasks.filter(t=>t.done).length;
+
+    row.innerHTML = `
+      <div class="week-day-header" onclick="toggleWeekRow(this.parentElement)">
+        <div class="week-day-label" style="color:${isToday?'var(--p0d)':''}">${isToday?'● ':''}{${dayNames[d.getDay()]}}</div>
+        <div class="week-day-date">${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} · W${dayTasks[0].week}</div>
+        <div class="week-day-phase" style="background:${ph.light};color:${ph.dark}">${ph.name}</div>
+        <div class="week-day-count">${doneCount}/${dayTasks.length} xong</div>
+        <div class="week-day-chevron">${isToday?'▲':'▼'}</div>
+      </div>
+      <div class="week-tasks" style="${isToday?'display:flex':'display:none'}" id="tasks-${dateStr}">
+        ${dayTasks.map(t => taskHTML(t)).join('')}
+      </div>
+    `;
+    row.innerHTML = row.innerHTML.replace(/{/g,'').replace(/}/g,'');
+    c.appendChild(row);
+  });
+}
+
+function toggleWeekRow(el) {
+  const open = el.classList.toggle('open');
+  const chev = el.querySelector('.week-day-chevron');
+  chev.textContent = open ? '▲' : '▼';
+  const tasksDiv = el.querySelector('.week-tasks');
+  if (tasksDiv) tasksDiv.style.display = open ? 'flex' : 'none';
+}
+
+// ── PHASES VIEW ───────────────────────────────────────
+function renderPhases() {
+  const c = document.getElementById('phaseContainer');
+  c.innerHTML = '';
+
+  PHASES.forEach(ph => {
+    const phTasks = TASKS.filter(t => t.phase === ph.id && (showCompleted || !t.done));
+    const done = phTasks.filter(t=>t.done).length;
+    const pct = phTasks.length ? Math.round(done/phTasks.length*100) : 0;
+
+    const block = document.createElement('div');
+    block.className = 'phase-block' + (ph.id===0?' open':'');
+
+    const weeks = [...new Set(phTasks.map(t=>t.week))].sort((a,b)=>a-b);
+    const weeksHTML = weeks.map(w => {
+      const wTasks = phTasks.filter(t=>t.week===w);
+      const wDone = wTasks.filter(t=>t.done).length;
+      return `<div class="week-section">
+        <div class="week-label">
+          <span class="week-status-dot" style="background:${wDone===wTasks.length&&wTasks.length>0?ph.dark:ph.color}"></span>
+          Tuần ${w} · ${wDone}/${wTasks.length} tasks
+        </div>
+        ${wTasks.map(t=>taskHTML(t)).join('')}
+      </div>`;
+    }).join('');
+
+    block.innerHTML = `
+      <div class="phase-head" onclick="togglePhase(this.parentElement)">
+        <div class="phase-stripe" style="background:${ph.color}"></div>
+        <div class="phase-info">
+          <div class="phase-name">${ph.name}</div>
+          <div class="phase-range">${phTasks.length} tasks · ${done} done</div>
+        </div>
+        <div class="phase-stat">
+          <div class="phase-pct" style="color:${ph.dark}">${pct}%</div>
+          <div class="phase-tasks-count">${phTasks.length} tasks</div>
+        </div>
+        <div class="phase-chevron">${ph.id===0?'▲':'▼'}</div>
+      </div>
+      <div class="phase-bar-row">
+        <div class="phase-bar-inner" style="background:${ph.color};width:${pct}%"></div>
+      </div>
+      <div class="phase-body">${weeksHTML}</div>
+    `;
+    c.appendChild(block);
+  });
+}
+
+function togglePhase(el) {
+  const open = el.classList.toggle('open');
+  const chev = el.querySelector('.phase-chevron');
+  chev.textContent = open ? '▲' : '▼';
+}
+
+// ── TASK HTML ─────────────────────────────────────────
+function taskHTML(t) {
+  const typ = ty(t.type);
+  const ph = p(t.phase);
+  return `
+    <div class="task-row${t.done?' done':''}" id="task-row-${t.id}" onclick="openTask(${t.id}, event)">
+      <div class="task-check" onclick="toggleTask(${t.id}, event)">${t.done?'✓':''}</div>
+      <div class="task-body">
+        <div class="task-title">${t.title}</div>
+        <div class="task-meta">
+          <span class="task-time">${t.time}</span>
+          <span class="task-tag" style="background:${typ.light};color:${typ.dark}">${typ.label}</span>
+          ${t.link?`<a class="task-link" href="${t.link}" target="_blank" onclick="event.stopPropagation()">🔗 link</a>`:''}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── TASK INTERACTIONS ─────────────────────────────────
+function toggleTask(id, e) {
+  e.stopPropagation();
+  TASKS[id].done = !TASKS[id].done;
+  saveState();
+  refreshAll();
+  updateStats();
+}
+
+function openTask(id, e) {
+  e.stopPropagation();
+  activeTaskId = id;
+  const t = TASKS[id];
+  const typ = ty(t.type);
+  const ph = p(t.phase);
+  const d = new Date(t.date+'T00:00:00');
+  document.getElementById('detailTitle').textContent = t.title;
+  document.getElementById('detailBadge').innerHTML = `<span class="badge" style="background:${typ.light};color:${typ.dark}">${typ.label}</span>`;
+  document.getElementById('detailDate').textContent = formatDate(d);
+  document.getElementById('detailTime').textContent = t.time;
+  document.getElementById('detailPhase').textContent = ph.name;
+  document.getElementById('detailType').textContent = typ.label;
+  document.getElementById('detailLink').innerHTML = t.link ? `<a href="${t.link}" target="_blank" style="color:var(--p0d)">${t.link}</a>` : '—';
+  document.getElementById('detailNotes').value = t.notes;
+  document.getElementById('detailDoneBtn').textContent = t.done ? '↩ Bỏ xong' : '✓ Đánh dấu xong';
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function toggleDetailDone() {
+  if (activeTaskId === null) return;
+  TASKS[activeTaskId].done = !TASKS[activeTaskId].done;
+  document.getElementById('detailDoneBtn').textContent = TASKS[activeTaskId].done ? '↩ Bỏ xong' : '✓ Đánh dấu xong';
+  saveState(); refreshAll(); updateStats();
+}
+
+function closeDetail(e) {
+  if (e.target === document.getElementById('detailOverlay')) closeDetailPanel();
+}
+function closeDetailPanel() {
+  if (activeTaskId !== null) {
+    TASKS[activeTaskId].notes = document.getElementById('detailNotes').value;
+    saveState();
+  }
+  document.getElementById('detailOverlay').classList.remove('open');
+  activeTaskId = null;
+}
+
+function refreshAll() {
+  if (currentView==='calendar') renderCalendar();
+  else if (currentView==='week') renderWeekView();
+  else renderPhases();
+}
+
+// ── STATS ─────────────────────────────────────────────
+function updateStats() {
+  const today = todayStr();
+  const todayTasks = tasksByDate(today);
+  const todayDone = todayTasks.filter(t=>t.done).length;
+  const allDone = TASKS.filter(t=>t.done).length;
+
+  document.getElementById('stat-today').textContent = todayTasks.length;
+  document.getElementById('stat-today-sub').textContent = `${todayDone} done · ${todayTasks.length-todayDone} còn lại`;
+  document.getElementById('stat-done').textContent = allDone;
+  document.getElementById('stat-done-pct').textContent = allDone > 0 ? `${Math.round(allDone/TASKS.length*100)}% tổng` : 'Bắt đầu thôi!';
+
+  const pct = Math.min(100, Math.round(allDone / TASKS.length * 100));
+  document.getElementById('sidebar-pct').textContent = pct + '%';
+  document.getElementById('sidebar-bar').style.width = pct + '%';
+}
+
+// ── UTILS ─────────────────────────────────────────────
+function toggleCompleted() {
+  showCompleted = !showCompleted;
+  refreshAll();
+}
+
+function markTodayDone() {
+  const today = todayStr();
+  tasksByDate(today).forEach(t => { t.done = true; });
+  saveState(); refreshAll(); updateStats();
+}
+
+function scrollToToday() {
+  switchView('week');
+  setTimeout(() => {
+    const el = document.getElementById(`day-${todayStr()}`);
+    if (el) { el.scrollIntoView({ behavior:'smooth', block:'center' }); }
+  }, 100);
+}
+
+function filterPhase(id) {
+  switchView('phases');
+  setTimeout(() => {
+    const blocks = document.querySelectorAll('.phase-block');
+    blocks.forEach((b, i) => {
+      b.classList.toggle('open', i===id);
+      const chev = b.querySelector('.phase-chevron');
+      if (chev) chev.textContent = i===id ? '▲' : '▼';
+    });
+  }, 100);
+}
+
+// ── TODAY BANNER ──────────────────────────────────────
+function updateTodayBanner() {
+  const today = new Date();
+  const days = ['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+  const dayName = days[today.getDay()];
+  const dateStr = `${today.getDate().toString().padStart(2,'0')}/${(today.getMonth()+1).toString().padStart(2,'0')}/${today.getFullYear()}`;
+  const todayTasks = tasksByDate(todayStr());
+  const weekNum = todayTasks.length ? todayTasks[0].week : '?';
+  const ph = todayTasks.length ? p(todayTasks[0].phase) : p(0);
+  document.getElementById('todayBannerMain').textContent = `Hôm nay: ${dayName}, ${dateStr} — Week ${weekNum}`;
+  document.querySelector('.today-banner').style.borderColor = ph.color;
+  document.querySelector('.today-banner').style.background = ph.light;
+}
+
+// ── INIT ──────────────────────────────────────────────
+updateTodayBanner();
+updateStats();
+renderCalendar();
+</script>
+</body>
+</html>
